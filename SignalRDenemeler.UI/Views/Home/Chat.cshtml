@@ -1,0 +1,77 @@
+﻿@using SignalRDenemeler.DAL.Models
+@model User
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>SignalR Message App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.10/signalr.min.js"></script>
+</head>
+
+
+
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">SignalR Message App</h1>
+        <div id="messages" class="mt-4 border rounded p-3"></div>
+        <br />
+        <div class="form-group">
+            <input type="text" id="messageInput" class="form-control" placeholder="Enter your message">
+        </div>
+        <div class="text-center">
+            <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        </div>
+        
+    </div>
+
+
+
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`http://192.168.1.35:5000/myhub?userName=@Model.userName`)
+            .build();
+
+        // Hub bağlantısını başlatma
+        connection.start()
+            .then(() => {
+                console.log("SignalR connected");
+
+                // Hub'dan gelen mesajları dinleme
+                connection.on("receiveMessage", (user, message) => {
+                    const userName = user;
+                    const encodedMessage = message;
+                    const messageElement = `<div><strong>${userName}</strong>: ${encodedMessage}</div>`;
+                    $("#messages").append(messageElement);
+                });
+
+
+                connection.on("JoinMessage", message => {
+                    const messageElement = `<div><strong>${message}</strong>`;
+                    $("#messages").append(messageElement);
+                })
+
+                connection.on("LeaveMessage", (message) => {
+                    const encodedMessage = message;
+                    const messageElement = `<div><strong>${encodedMessage}</strong>`;
+                    $("#messages").append(messageElement);
+                });
+
+                
+            })
+            .catch(err => console.error("SignalR connection error: ", err));
+
+        // Mesaj gönderme fonksiyonu
+        function sendMessage() {
+            const message = $("#messageInput").val();
+
+            // Server'a mesajı ve kullanıcı adını gönderme
+            connection.invoke("SendMessageAsync", '@Model.userName', message)
+                .catch(err => console.error("Error sending message: ", err));
+            $("#messageInput").val("");
+        }
+    </script>
+</body>
+</html>
